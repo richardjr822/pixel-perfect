@@ -3,6 +3,7 @@
 import type { LayoutConfig, LayoutId } from '@/types'
 import { LAYOUTS } from '@/lib/layouts'
 import { FlowChrome } from '@/components/ui/FlowChrome'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 function LayoutCard({ layout, selected, onClick }: { layout: LayoutConfig; selected: boolean; onClick: () => void }) {
   const slots = Array.from({ length: layout.count })
@@ -104,6 +105,7 @@ interface Props {
 }
 
 export function ChooseLayoutScreen({ chosen, onChoose, onContinue, onBack }: Props) {
+  const { isMobile } = useBreakpoint()
   return (
     <FlowChrome step={2} total={4} title="CHOOSE LAYOUT" onBack={onBack}>
       <div style={{
@@ -133,7 +135,15 @@ export function ChooseLayoutScreen({ chosen, onChoose, onContinue, onBack }: Pro
           </div>
         </div>
 
-        <div style={{
+        <div style={isMobile ? {
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, auto)',
+          gap: 14,
+          overflowX: 'auto',
+          padding: '8px 4px 16px',
+          width: '100%',
+          justifyContent: 'start',
+        } : {
           display: 'flex',
           gap: 22,
           flexWrap: 'wrap',

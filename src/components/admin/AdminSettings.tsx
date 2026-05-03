@@ -1,4 +1,5 @@
 import { AdminCard } from '@/components/ui/AdminCard'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 function Field({ label, value, toggle }: { label: string; value: string; toggle?: boolean }) {
   return (
@@ -64,8 +65,9 @@ const HOURS = [
 const DANGER_ACTIONS = ['CLEAR BOOKING HISTORY', 'WIPE PHOTO ARCHIVE', 'FACTORY RESET']
 
 export function AdminSettings() {
+  const { isMobile } = useBreakpoint()
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
       <AdminCard title="SESSION DEFAULTS" accent="var(--mustard)">
         <Field label="DEFAULT COUNTDOWN"   value="3 SECONDS" />
         <Field label="DEFAULT FILTER"      value="NO FILTER" />

@@ -5,6 +5,7 @@ import type { CapturedShot, FilterId, LayoutConfig } from '@/types'
 import { FILTERS } from '@/lib/layouts'
 import { FlowChrome } from '@/components/ui/FlowChrome'
 import { ArcadePanel } from '@/components/ui/ArcadePanel'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 const FILTER_IDS = Object.keys(FILTERS) as FilterId[]
 
@@ -27,6 +28,7 @@ export function CameraScreen({
   onDone,
   onBack,
 }: Props) {
+  const { isMobile } = useBreakpoint()
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const shotsRef = useRef<CapturedShot[]>([])
@@ -103,10 +105,10 @@ export function CameraScreen({
   return (
     <FlowChrome step={3} total={4} title="CAMERA" onBack={onBack}>
       <div style={{
-        padding: 'min(3vw, 36px)',
+        padding: isMobile ? '12px' : 'min(3vw, 36px)',
         display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr) 320px',
-        gap: 28,
+        gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) 320px',
+        gap: isMobile ? 12 : 28,
         maxWidth: 1280,
         margin: '0 auto',
       }}>

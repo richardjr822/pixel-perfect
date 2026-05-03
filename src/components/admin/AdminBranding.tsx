@@ -1,4 +1,5 @@
 import { AdminCard } from '@/components/ui/AdminCard'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 function Field({ label, value, toggle, multiline }: { label: string; value: string; toggle?: boolean; multiline?: boolean }) {
   return (
@@ -63,8 +64,9 @@ const PALETTE = [
 ]
 
 export function AdminBranding() {
+  const { isMobile } = useBreakpoint()
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
       <AdminCard title="STRIP BRANDING" accent="var(--mustard)">
         <Field label="HEADER TEXT"       value="★ PIXEL PERFECT ★" />
         <Field label="FOOTER TEXT"       value="pixelperfect.ph" />

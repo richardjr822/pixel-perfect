@@ -6,6 +6,7 @@ import { FILTERS } from '@/lib/layouts'
 import { FlowChrome } from '@/components/ui/FlowChrome'
 import { ArcadePanel } from '@/components/ui/ArcadePanel'
 import { PixelArt } from '@/components/ui/PixelArt'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 const STAR = `
 ...y...
@@ -144,20 +145,25 @@ interface Props {
 export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Props) {
   const [frameColorId, setFrameColorId] = useState('ink')
   const [stickers, setStickers] = useState('stars')
+  const { isMobile } = useBreakpoint()
 
   const frame = FRAME_COLORS.find(f => f.id === frameColorId) ?? FRAME_COLORS[0]
 
   const cols = layout.columns
-  const slotW = layout.single ? 360 : cols === 2 ? 110 : 200
-  const slotH = layout.single ? 260 : layout.count <= 2 ? 180 : layout.count >= 6 ? 110 : 150
+  const slotW = isMobile
+    ? (layout.single ? 220 : cols === 2 ? 80 : 140)
+    : (layout.single ? 360 : cols === 2 ? 110 : 200)
+  const slotH = isMobile
+    ? (layout.single ? 160 : layout.count <= 2 ? 120 : layout.count >= 6 ? 80 : 100)
+    : (layout.single ? 260 : layout.count <= 2 ? 180 : layout.count >= 6 ? 110 : 150)
 
   return (
     <FlowChrome step={4} total={4} title="YOUR STRIP" onBack={onRetake}>
       <div style={{
-        padding: 'min(3vw, 36px)',
+        padding: isMobile ? '12px' : 'min(3vw, 36px)',
         display: 'grid',
-        gridTemplateColumns: 'auto 1fr',
-        gap: 36,
+        gridTemplateColumns: isMobile ? '1fr' : 'auto 1fr',
+        gap: isMobile ? 16 : 36,
         maxWidth: 1280,
         margin: '0 auto',
         alignItems: 'flex-start',
@@ -335,7 +341,7 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
             }}>
               ▸ FRAME COLOR
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isMobile ? 2 : 3}, 1fr)`, gap: 8 }}>
               {FRAME_COLORS.map(c => {
                 const active = frameColorId === c.id
                 return (
@@ -373,7 +379,7 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
             }}>
               ▸ STICKERS
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isMobile ? 2 : 3}, 1fr)`, gap: 8 }}>
               {STICKER_PACKS.map(s => {
                 const active = stickers === s.id
                 return (

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { AdminCard } from '@/components/ui/AdminCard'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 const INITIAL_LAYOUTS = [
   { id: 'S', label: 'SINGLE SHOT',  count: 1, enabled: true,  price: 100 },
@@ -14,6 +15,7 @@ const INITIAL_LAYOUTS = [
 
 export function AdminLayouts() {
   const [layouts, setLayouts] = useState(INITIAL_LAYOUTS)
+  const { isMobile } = useBreakpoint()
 
   function toggleEnabled(id: string) {
     setLayouts(prev => prev.map(l => l.id === id ? { ...l, enabled: !l.enabled } : l))
@@ -30,7 +32,7 @@ export function AdminLayouts() {
       }}>
         enable/disable layouts, set per-layout pricing, and pick the default selection.
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 14 }}>
         {layouts.map(L => (
           <div key={L.id} style={{
             padding: '16px',

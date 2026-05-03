@@ -1,4 +1,5 @@
 import { AdminCard } from '@/components/ui/AdminCard'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 const SYSTEMS = [
   { n: 'WEB CAMERA',    s: 'ONLINE', d: 'getUserMedia · 1080p · 30fps',           c: 'var(--olive)' },
@@ -10,9 +11,10 @@ const SYSTEMS = [
 ]
 
 export function AdminSystemStatus() {
+  const { isMobile } = useBreakpoint()
   return (
     <AdminCard title="SYSTEM STATUS" accent="var(--burnt)">
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
         {SYSTEMS.map(it => (
           <div key={it.n} style={{
             padding: '16px',

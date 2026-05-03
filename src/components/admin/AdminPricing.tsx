@@ -1,4 +1,5 @@
 import { AdminCard } from '@/components/ui/AdminCard'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 const TIERS = [
   { name: 'SINGLE SHOT',  price: 100 },
@@ -17,8 +18,9 @@ const PAYMENT_METHODS = [
 ]
 
 export function AdminPricing() {
+  const { isMobile } = useBreakpoint()
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr', gap: 16 }}>
       <AdminCard title="PRICE PER LAYOUT" accent="var(--mustard)">
         {TIERS.map((t, i) => (
           <div key={t.name} style={{

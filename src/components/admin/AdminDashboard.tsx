@@ -1,4 +1,5 @@
 import { AdminCard } from '@/components/ui/AdminCard'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 function StatCard({ label, value, sub, accent }: { label: string; value: string; sub: string; accent: string }) {
   return (
@@ -62,10 +63,11 @@ const POPULARITY = [
 ]
 
 export function AdminDashboard() {
+  const { isMobile } = useBreakpoint()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12 }}>
         <StatCard label="SESSIONS TODAY"  value="187"      sub="+24 vs yesterday"     accent="var(--mustard)" />
         <StatCard label="REVENUE TODAY"   value="₱18,420"  sub="avg ₱220 / session"   accent="var(--burnt)" />
         <StatCard label="PHOTOS SHARED"   value="142"      sub="via link / QR / email" accent="var(--olive)" />
@@ -73,7 +75,7 @@ export function AdminDashboard() {
       </div>
 
       {/* Charts row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.4fr 1fr', gap: 16 }}>
         {/* Hourly bar chart */}
         <AdminCard title="HOURLY SESSIONS · TODAY" accent="var(--mustard)">
           <div style={{ height: 180, display: 'flex', alignItems: 'flex-end', gap: 6, paddingBottom: 0 }}>

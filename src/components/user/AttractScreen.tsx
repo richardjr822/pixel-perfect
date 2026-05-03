@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { PixelArt } from '@/components/ui/PixelArt'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 const MARQUEE_TEXT =
   'BOOK A SESSION • 4 PHOTOS FOR ₱200 • SMILE BIG • PIXEL PERFECT • SHARE INSTANTLY • SCAN TO START • '
@@ -83,6 +84,7 @@ interface AttractScreenProps {
 
 export function AttractScreen({ onStart, onAdminUnlock }: AttractScreenProps) {
   const [demoFrame, setDemoFrame] = useState(0)
+  const { isMobile } = useBreakpoint()
   const seqRef = useRef(0)
   const seqTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -151,14 +153,14 @@ export function AttractScreen({ onStart, onAdminUnlock }: AttractScreenProps) {
       {/* ── CENTER STAGE ── */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1fr minmax(420px, 720px) 1fr',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr minmax(420px, 720px) 1fr',
         alignItems: 'center',
-        gap: 'min(3vw, 40px)',
-        padding: 'min(2vw, 24px) 0',
+        gap: isMobile ? 0 : 'min(3vw, 40px)',
+        padding: isMobile ? '8px 0' : 'min(2vw, 24px) 0',
       }}>
 
         {/* Left side panel */}
-        <div style={{
+        {isMobile ? null : <div style={{
           height: 'min(72vh, 640px)',
           background: 'var(--ivory)',
           border: '4px solid var(--ink)',
@@ -225,7 +227,7 @@ export function AttractScreen({ onStart, onAdminUnlock }: AttractScreenProps) {
               scale={3}
             />
           </div>
-        </div>
+        </div>}
 
         {/* Center CRT screen */}
         <div style={{
@@ -234,7 +236,7 @@ export function AttractScreen({ onStart, onAdminUnlock }: AttractScreenProps) {
           boxShadow: 'inset 0 0 80px rgba(0,0,0,0.5), 10px 10px 0 var(--ink)',
           borderRadius: 18,
           position: 'relative',
-          minHeight: 460,
+          minHeight: isMobile ? 'calc(100vh - 200px)' : 460,
           overflow: 'hidden',
         }}>
           {/* Glass highlight */}
@@ -392,7 +394,7 @@ export function AttractScreen({ onStart, onAdminUnlock }: AttractScreenProps) {
         </div>
 
         {/* Right side panel */}
-        <div style={{
+        {isMobile ? null : <div style={{
           height: 'min(72vh, 640px)',
           background: 'var(--ivory)',
           border: '4px solid var(--ink)',
@@ -449,17 +451,17 @@ export function AttractScreen({ onStart, onAdminUnlock }: AttractScreenProps) {
           }}>
             best smiles always
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* ── CONTROL DECK ── */}
       <div style={{
         background: 'var(--ink)',
-        padding: '18px 28px',
+        padding: isMobile ? '12px 16px' : '18px 28px',
         display: 'grid',
-        gridTemplateColumns: 'auto 1fr auto',
+        gridTemplateColumns: isMobile ? 'auto 1fr' : 'auto 1fr auto',
         alignItems: 'center',
-        gap: 32,
+        gap: isMobile ? 16 : 32,
         borderTop: '4px solid var(--mustard)',
       }}>
         {/* Joystick + buttons */}
