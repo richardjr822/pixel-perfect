@@ -84,14 +84,6 @@ function LayoutCard({ layout, selected, onClick }: { layout: LayoutConfig; selec
         }}>
           {layout.subtitle}
         </div>
-        <div style={{
-          fontFamily: "'Press Start 2P', monospace",
-          fontSize: 10,
-          color: 'var(--burnt)',
-          marginTop: 4,
-        }}>
-          ₱{layout.price}
-        </div>
       </div>
     </div>
   )

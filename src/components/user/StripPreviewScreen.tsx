@@ -7,6 +7,7 @@ import { FILTERS } from '@/lib/layouts'
 import { FlowChrome } from '@/components/ui/FlowChrome'
 import { ArcadePanel } from '@/components/ui/ArcadePanel'
 import { ArcadeKeyboard } from '@/components/ui/ArcadeKeyboard'
+import { PrintModal } from '@/components/ui/PrintModal'
 import { PixelArt } from '@/components/ui/PixelArt'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
@@ -446,6 +447,7 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
   const [emailError, setEmailError] = useState<string | null>(null)
   const [emailSending, setEmailSending] = useState(false)
   const [keyboardOpen, setKeyboardOpen] = useState(false)
+  const [printOpen, setPrintOpen] = useState(false)
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null)
   const [qrOpen, setQrOpen] = useState(false)
   const [qrError, setQrError] = useState<string | null>(null)
@@ -540,11 +542,11 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
   }, [stripUrl])
 
   function handlePrint() {
-    if (isUploading) {
+    if (isUploading || !stripUrl) {
       return
     }
 
-    window.print()
+    setPrintOpen(true)
   }
 
   function handleQrCode() {
@@ -633,6 +635,13 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
   }
   return (
     <>
+    {printOpen && stripUrl && (
+      <PrintModal
+        stripUrl={stripUrl}
+        layout={layout}
+        onClose={() => setPrintOpen(false)}
+      />
+    )}
     {keyboardOpen && (
       <ArcadeKeyboard
         value={emailInput}
@@ -841,7 +850,7 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
             {[
-              { icon: 'PRINT', label: 'PRINT', accent: 'var(--mustard)', onClick: handlePrint, disabled: isUploading },
+              { icon: 'PRINT', label: 'PRINT', accent: 'var(--mustard)', onClick: handlePrint, disabled: isUploading || !stripUrl },
               { icon: 'QR', label: 'QR CODE', accent: 'var(--burnt)', onClick: handleQrCode, disabled: false },
               { icon: 'MAIL', label: 'EMAIL', accent: 'var(--blue)', onClick: handleEmailButton, disabled: emailSent },
               { icon: 'AGAIN', label: 'RETAKE', accent: 'var(--ivory)', onClick: onRetake, disabled: false },

@@ -215,3 +215,46 @@ body {
   mix-blend-mode: multiply;
   z-index: 50;
 }
+
+@media print {
+  html,
+  body {
+    overflow: visible !important;
+    height: auto !important;
+    background: white !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .print-frame,
+  .print-frame * {
+    visibility: visible !important;
+  }
+
+  .print-frame {
+    position: fixed !important;
+    inset: 0 !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-content: flex-start !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+  }
+
+  .print-strip {
+    display: block !important;
+    object-fit: contain !important;
+    background: white !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  @page {
+    size: 4in 6in;
+    margin: 0;
+  }
+}

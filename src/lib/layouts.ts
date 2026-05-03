@@ -114,7 +114,7 @@ export const COUNTDOWN_OPTIONS = [3, 5, 10] as const
 
 export const DEFAULT_BRANDING = {
   marquee_text:
-    'BOOK A SESSION • 4 PHOTOS FOR ₱200 • SMILE BIG • PIXEL PERFECT • SHARE INSTANTLY • SCAN TO START',
+    'BOOK A SESSION • SMILE BIG • PIXEL PERFECT • SHARE INSTANTLY • SCAN TO START',
   tagline: 'GET YOUR FACE IN THE FRAME',
   logo_url: null,
   header_text: '★ PIXEL PERFECT ★',

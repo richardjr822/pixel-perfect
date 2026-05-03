@@ -5,7 +5,7 @@ import { PixelArt } from '@/components/ui/PixelArt'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 const MARQUEE_TEXT =
-  'BOOK A SESSION • 4 PHOTOS FOR ₱200 • SMILE BIG • PIXEL PERFECT • SHARE INSTANTLY • SCAN TO START • '
+  'BOOK A SESSION • SMILE BIG • PIXEL PERFECT • SHARE INSTANTLY • SCAN TO START • '
 
 const FLOATING_STRIPS: Array<{
   left: string
@@ -421,14 +421,6 @@ export function AttractScreen({ onStart, onAdminUnlock }: AttractScreenProps) {
                 letterSpacing: '0.2em',
               }}>
                 TAP TO START
-              </span>
-              <span style={{
-                fontFamily: "'Press Start 2P', monospace",
-                fontSize: 'clamp(10px, 1vw, 14px)',
-                color: 'var(--ivory)',
-                opacity: 0.7,
-              }}>
-                ₱100–₱280
               </span>
             </div>
           </div>
