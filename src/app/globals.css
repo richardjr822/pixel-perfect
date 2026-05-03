@@ -1,0 +1,181 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ivory: #e8e6d8;
+  --blue: #5a82aa;
+  --olive: #558203;
+  --burnt: #c85500;
+  --mustard: #ffce1b;
+  --ink: #1a1a14;
+  --font-arcade: 'Press Start 2P', monospace;
+  --font-crt: 'VT323', monospace;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--ink);
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: var(--mustard);
+  color: var(--ink);
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes star-twinkle {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes flash {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes strip-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-120px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes arrow-pulse {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(6px);
+  }
+}
+
+@keyframes coin-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(4deg);
+  }
+}
+
+@keyframes blink-slow {
+  0%,
+  60% {
+    opacity: 1;
+  }
+  61%,
+  100% {
+    opacity: 0.15;
+  }
+}
+
+@keyframes screen-static {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 4px 6px;
+  }
+}
+
+.font-arcade {
+  font-family: var(--font-arcade);
+}
+
+.font-crt {
+  font-family: var(--font-crt);
+}
+
+.animate-marquee {
+  animation: marquee 28s linear infinite;
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+.animate-star {
+  animation: star-twinkle 1.4s ease-in-out infinite;
+}
+
+.animate-flash {
+  animation: flash 0.4s ease-out forwards;
+}
+
+.animate-strip-drop {
+  animation: strip-drop 1.2s cubic-bezier(.5, .1, .3, 1.2) both;
+}
+
+.animate-arrow {
+  animation: arrow-pulse 0.8s ease-in-out infinite;
+}
+
+.animate-coin {
+  animation: coin-bob 1.2s ease-in-out infinite;
+}
+
+.animate-blink-slow {
+  animation: blink-slow 1.2s infinite;
+}
+
+.scanlines {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.35) 0px,
+    rgba(0, 0, 0, 0.35) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: multiply;
+  z-index: 50;
+}
