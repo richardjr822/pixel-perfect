@@ -40,6 +40,33 @@ export interface Session {
   created_at: string
 }
 
+export interface UploadRequestBody {
+  base64: string
+  folder?: string
+}
+
+export interface CreateSessionRequestBody {
+  layout_id: string
+  filter: string
+  photo_urls: string[]
+  strip_url: string | null
+  price: number
+  status: 'completed' | 'abandoned'
+  email: string | null
+}
+
+export interface EmailRequestBody {
+  to: string
+  stripUrl: string
+  layoutLabel: string
+}
+
+export interface SendStripEmailParams {
+  to: string
+  stripUrl: string
+  layoutLabel: string
+}
+
 export interface AdminStats {
   sessions_today: number
   revenue_today: number
@@ -51,6 +78,10 @@ export interface BrandingConfig {
   marquee_text: string
   tagline: string
   logo_url: string | null
+  header_text: string
+  footer_text: string
+  show_date_stamp: boolean
+  show_qr_code: boolean
 }
 
 export interface SettingsRow {

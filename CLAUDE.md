@@ -218,3 +218,5 @@ or GMAIL_APP_PASSWORD to the client. They are server-only.
 - [ ] Admin layout toggles persist to Supabase settings table
 - [ ] App runs fullscreen on a 1920×1080 display without scroll
 ```
+
+NO COMMENTS in the code

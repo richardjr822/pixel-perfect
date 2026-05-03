@@ -7,6 +7,20 @@ import { useBreakpoint } from '@/hooks/useBreakpoint'
 const MARQUEE_TEXT =
   'BOOK A SESSION • 4 PHOTOS FOR ₱200 • SMILE BIG • PIXEL PERFECT • SHARE INSTANTLY • SCAN TO START • '
 
+const FLOATING_STRIPS: Array<{
+  left: string
+  delay: string
+  dur: string
+  rot: string
+  colors: string[]
+}> = [
+  { left: '6%',  delay: '0s',   dur: '13s', rot: '-8deg', colors: ['var(--mustard)', 'var(--blue)',    'var(--burnt)',   'var(--olive)'] },
+  { left: '20%', delay: '-5s',  dur: '16s', rot: '6deg',  colors: ['var(--blue)',    'var(--mustard)', 'var(--ink)',     'var(--burnt)'] },
+  { left: '76%', delay: '-3s',  dur: '11s', rot: '-5deg', colors: ['var(--burnt)',   'var(--ivory)',   'var(--mustard)', 'var(--blue)']  },
+  { left: '89%', delay: '-8s',  dur: '15s', rot: '7deg',  colors: ['var(--olive)',   'var(--burnt)',   'var(--mustard)', 'var(--ink)']   },
+  { left: '52%', delay: '-10s', dur: '19s', rot: '-3deg', colors: ['var(--mustard)', 'var(--ink)',     'var(--blue)',    'var(--olive)'] },
+]
+
 const STAR = `
 ...y...
 ...y...
@@ -113,12 +127,49 @@ export function AttractScreen({ onStart, onAdminUnlock }: AttractScreenProps) {
     <div style={{
       position: 'absolute',
       inset: 0,
+      overflow: 'hidden',
       background: 'radial-gradient(ellipse at 50% 30%, #6e94b8 0%, var(--blue) 40%, #2f4d6c 100%)',
       display: 'grid',
       gridTemplateRows: 'auto 1fr auto',
       gap: 0,
       padding: 'min(3vw, 40px)',
     }}>
+
+      {/* ── FLOATING BACKGROUND STRIPS ── */}
+      {FLOATING_STRIPS.map((s, i) => (
+        <div
+          key={i}
+          className="animate-float-up"
+          style={{
+            position: 'absolute',
+            bottom: '-140px',
+            left: s.left,
+            background: 'var(--ivory)',
+            padding: '6px 5px 10px',
+            border: '2px solid rgba(26,26,20,0.4)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3,
+            zIndex: 0,
+            pointerEvents: 'none',
+            '--float-rot': s.rot,
+            '--float-delay': s.delay,
+            '--float-dur': s.dur,
+          } as React.CSSProperties}
+        >
+          {s.colors.map((c, j) => (
+            <div key={j} style={{ width: 30, height: 22, background: c }} />
+          ))}
+          <div style={{
+            marginTop: 3,
+            width: 30,
+            textAlign: 'center',
+            fontFamily: 'monospace',
+            fontSize: 7,
+            color: 'rgba(26,26,20,0.5)',
+          }}>★</div>
+        </div>
+      ))}
 
       {/* ── TOP MARQUEE ── */}
       <div style={{
@@ -336,7 +387,7 @@ export function AttractScreen({ onStart, onAdminUnlock }: AttractScreenProps) {
             {/* TAP TO START */}
             <div
               onClick={onStart}
-              className="animate-blink-slow"
+              className="animate-pulse-glow"
               style={{
                 marginTop: 28,
                 cursor: 'pointer',
@@ -525,18 +576,44 @@ export function AttractScreen({ onStart, onAdminUnlock }: AttractScreenProps) {
           ◀ ◀ ◀ &nbsp; SELECT YOUR LAYOUT &nbsp; ▶ ▶ ▶
         </div>
 
-        <div
-          onClick={onStart}
-          style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
-        >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          {/* Power LED */}
           <div style={{
-            fontFamily: "'VT323', monospace",
-            fontSize: 24,
-            color: 'var(--ivory)',
-            lineHeight: 1,
-          }}>
-            tap here<br />
-            <span style={{ color: 'var(--mustard)' }}>↓ to start ↓</span>
+            width: 12,
+            height: 12,
+            borderRadius: '50%',
+            background: 'var(--olive)',
+            border: '2px solid var(--ink)',
+            boxShadow: '0 0 8px var(--olive), 0 0 18px rgba(85,130,3,0.45)',
+            flexShrink: 0,
+          }} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            <div style={{
+              fontFamily: "'Press Start 2P', monospace",
+              fontSize: 9,
+              color: 'var(--mustard)',
+              letterSpacing: '0.2em',
+              opacity: 0.65,
+            }}>
+              CREDITS 01
+            </div>
+            <div
+              className="animate-blink"
+              onClick={onStart}
+              style={{
+                cursor: 'pointer',
+                background: 'var(--burnt)',
+                color: 'var(--ivory)',
+                fontFamily: "'Press Start 2P', monospace",
+                fontSize: 9,
+                padding: '8px 14px',
+                border: '3px solid var(--ivory)',
+                letterSpacing: '0.12em',
+                boxShadow: '3px 3px 0 var(--ink)',
+              }}
+            >
+              ⊙ INSERT COIN
+            </div>
           </div>
         </div>
       </div>

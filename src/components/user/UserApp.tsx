@@ -20,10 +20,17 @@ export function UserApp({ onAdminUnlock }: UserAppProps) {
   const [countdownSec, setCountdownSec] = useState<3 | 5 | 10>(3)
   const [photoFilter, setPhotoFilter] = useState<FilterId>('none')
 
+  function handleStart() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {})
+    }
+    setScreen('welcome')
+  }
+
   return (
     <div className="w-screen h-screen overflow-hidden bg-[var(--ink)] relative">
       {screen === 'attract' && (
-        <AttractScreen onStart={() => setScreen('welcome')} onAdminUnlock={onAdminUnlock} />
+        <AttractScreen onStart={handleStart} onAdminUnlock={onAdminUnlock} />
       )}
       {screen === 'welcome' && (
         <WelcomeScreen

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import type { AdminSection } from '@/types'
+import { useEffect, useState } from 'react'
+import type { AdminSection, Session, SettingsRow } from '@/types'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { AdminDashboard } from './AdminDashboard'
 import { AdminSessions } from './AdminSessions'
@@ -21,11 +21,46 @@ const SECTIONS: { id: AdminSection; label: string; icon: string }[] = [
   { id: 'settings',  label: 'SETTINGS',  icon: '⚙' },
 ]
 
+function isSettingsResponse(v: unknown): v is { settings: SettingsRow } {
+  return typeof v === 'object' && v !== null && 'settings' in v
+}
+
+function isSessionsResponse(v: unknown): v is { sessions: Session[] } {
+  return typeof v === 'object' && v !== null && 'sessions' in v && Array.isArray((v as Record<string, unknown>).sessions)
+}
+
 export function AdminApp() {
   const [section, setSection] = useState<AdminSection>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [databaseOnline, setDatabaseOnline] = useState(false)
+  const [settingsOnline, setSettingsOnline] = useState(false)
+  const [sessionCount, setSessionCount] = useState(0)
   const { isMobile } = useBreakpoint()
   const active = SECTIONS.find(s => s.id === section)!
+
+  useEffect(() => {
+    async function fetchAdminStatus() {
+      try {
+        const [settingsRes, sessionsRes] = await Promise.all([
+          fetch('/api/settings'),
+          fetch('/api/sessions?limit=200'),
+        ])
+        const settingsData: unknown = await settingsRes.json()
+        const sessionsData: unknown = await sessionsRes.json()
+
+        setSettingsOnline(settingsRes.ok && isSettingsResponse(settingsData))
+
+        if (sessionsRes.ok && isSessionsResponse(sessionsData)) {
+          setDatabaseOnline(true)
+          setSessionCount(sessionsData.sessions.length)
+        }
+      } catch (error) {
+        console.error(error)
+      }
+    }
+
+    void fetchAdminStatus()
+  }, [])
 
   const sidebar = (
     <div style={{
@@ -91,10 +126,10 @@ export function AdminApp() {
 
       <div style={{ margin: '12px', padding: '12px', background: 'var(--olive)', border: '2px solid var(--mustard)' }}>
         <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--mustard)', letterSpacing: '0.15em', marginBottom: 6 }}>
-          ● SYSTEM ONLINE
+          {databaseOnline && settingsOnline ? '● DATABASE ONLINE' : '● DATABASE CHECK'}
         </div>
         <div style={{ fontFamily: "'VT323', monospace", fontSize: 18, color: 'var(--ivory)', lineHeight: 1.3 }}>
-          uptime 14d 3h<br />web app v2.4.1
+          {sessionCount} sessions loaded<br />settings {settingsOnline ? 'synced' : 'pending'}
         </div>
       </div>
     </div>
@@ -188,7 +223,7 @@ export function AdminApp() {
                 padding: '8px 12px',
                 letterSpacing: '0.15em',
               }}>
-                OPERATOR: AAA
+                SESSIONS: {sessionCount}
               </div>
             )}
           </div>
@@ -199,7 +234,7 @@ export function AdminApp() {
           {section === 'sessions'  && <AdminSessions />}
           {section === 'layouts'   && <AdminLayouts />}
           {section === 'branding'  && <AdminBranding />}
-          {section === 'pricing'   && <AdminPricing />}
+          {section === 'pricing'   && <AdminPricing onNavigate={setSection} />}
           {section === 'system'    && <AdminSystemStatus />}
           {section === 'settings'  && <AdminSettings />}
         </div>

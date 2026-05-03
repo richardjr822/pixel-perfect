@@ -165,6 +165,42 @@ body {
   animation: blink-slow 1.2s infinite;
 }
 
+@keyframes float-up {
+  0% {
+    opacity: 0;
+    transform: translateY(0) rotate(var(--float-rot, -6deg));
+  }
+  8% {
+    opacity: 0.14;
+  }
+  92% {
+    opacity: 0.1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-110vh) rotate(calc(var(--float-rot, -6deg) * -1.5));
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 6px 6px 0 var(--mustard);
+  }
+  50% {
+    box-shadow: 6px 6px 0 var(--mustard), 0 0 22px rgba(255, 206, 27, 0.55),
+      0 0 44px rgba(255, 206, 27, 0.18);
+  }
+}
+
+.animate-float-up {
+  animation: float-up var(--float-dur, 12s) linear var(--float-delay, 0s) infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
 .scanlines {
   pointer-events: none;
   position: absolute;

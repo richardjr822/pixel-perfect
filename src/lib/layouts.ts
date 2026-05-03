@@ -117,6 +117,10 @@ export const DEFAULT_BRANDING = {
     'BOOK A SESSION • 4 PHOTOS FOR ₱200 • SMILE BIG • PIXEL PERFECT • SHARE INSTANTLY • SCAN TO START',
   tagline: 'GET YOUR FACE IN THE FRAME',
   logo_url: null,
+  header_text: '★ PIXEL PERFECT ★',
+  footer_text: 'pixelperfect.ph',
+  show_date_stamp: true,
+  show_qr_code: true,
 } satisfies BrandingConfig
 
 export const DEFAULT_SETTINGS = {
