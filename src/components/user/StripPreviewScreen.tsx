@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import type { CapturedShot, LayoutConfig } from '@/types'
 import { FILTERS } from '@/lib/layouts'
@@ -66,6 +66,8 @@ const FRAME_COLORS = [
   { id: 'mustard', label: 'MUSTARD', value: 'var(--mustard)', fg: 'var(--ink)' },
 ]
 
+type StickerPackId = (typeof STICKER_PACKS)[number]['id']
+
 const STICKER_PACKS = [
   { id: 'none',      label: 'NONE' },
   { id: 'stars',     label: 'STARS' },
@@ -77,9 +79,9 @@ const STICKER_PACKS = [
   { id: 'bloom',     label: 'BLOOM' },
   { id: 'tape',      label: 'TAPE' },
   { id: 'glitter',   label: 'GLITTER' },
-]
+] as const
 
-function StickerOverlay({ pack }: { pack: string }) {
+function StickerOverlay({ pack }: { pack: StickerPackId }) {
   if (pack === 'none') return null
 
   if (pack === 'stars') return (
@@ -356,6 +358,238 @@ function drawImageCover(
   ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height)
 }
 
+function drawPixelPattern(
+  ctx: CanvasRenderingContext2D,
+  pattern: string,
+  palette: Record<string, string>,
+  x: number,
+  y: number,
+  scale: number
+) {
+  const rows = pattern.trim().split('\n')
+
+  rows.forEach((row, rowIndex) => {
+    Array.from(row).forEach((char, columnIndex) => {
+      const color = palette[char]
+
+      if (!color || color === 'transparent') {
+        return
+      }
+
+      ctx.fillStyle = resolveCanvasColor(color)
+      ctx.fillRect(x + columnIndex * scale, y + rowIndex * scale, scale, scale)
+    })
+  })
+}
+
+function drawCenteredPixelPattern(
+  ctx: CanvasRenderingContext2D,
+  pattern: string,
+  palette: Record<string, string>,
+  x: number,
+  y: number,
+  scale: number
+) {
+  const rows = pattern.trim().split('\n')
+  const patternWidth = Math.max(...rows.map(row => row.length)) * scale
+  const patternHeight = rows.length * scale
+
+  drawPixelPattern(ctx, pattern, palette, x - patternWidth / 2, y - patternHeight / 2, scale)
+}
+
+function drawRotatedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  color: string,
+  rotation = 0,
+  alpha = 1
+) {
+  ctx.save()
+  ctx.translate(x + width / 2, y + height / 2)
+  ctx.rotate(rotation)
+  ctx.globalAlpha = alpha
+  ctx.fillStyle = resolveCanvasColor(color)
+  ctx.fillRect(-width / 2, -height / 2, width, height)
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)'
+  ctx.lineWidth = 2
+  ctx.strokeRect(-width / 2, -height / 2, width, height)
+  ctx.restore()
+}
+
+function drawStickerText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+  rotation = 0
+) {
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.rotate(rotation)
+  ctx.fillStyle = resolveCanvasColor(color)
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.font = `${size}px "Press Start 2P", monospace`
+  ctx.fillText(text, 0, 0)
+  ctx.restore()
+}
+
+function drawFilmPerfs(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, count: number, horizontal: boolean) {
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)'
+  ctx.lineWidth = 1
+
+  for (let i = 0; i < count; i++) {
+    const step = horizontal ? width / count : height / count
+    const perfX = horizontal ? x + i * step + step / 2 - 7 : x + width / 2 - 6
+    const perfY = horizontal ? y + height / 2 - 6 : y + i * step + step / 2 - 7
+    const perfW = horizontal ? 14 : 12
+    const perfH = horizontal ? 12 : 14
+
+    ctx.fillRect(perfX, perfY, perfW, perfH)
+    ctx.strokeRect(perfX, perfY, perfW, perfH)
+  }
+}
+
+function drawCornerBrackets(ctx: CanvasRenderingContext2D, width: number, height: number) {
+  ctx.strokeStyle = resolveCanvasColor('var(--ink)')
+  ctx.lineWidth = 10
+
+  const size = 36
+  const edge = 7
+  const points = [
+    [edge, edge, edge + size, edge, edge, edge + size],
+    [width - edge, edge, width - edge - size, edge, width - edge, edge + size],
+    [edge, height - edge, edge + size, height - edge, edge, height - edge - size],
+    [width - edge, height - edge, width - edge - size, height - edge, width - edge, height - edge - size],
+  ]
+
+  points.forEach(([x1, y1, x2, y2, x3, y3]) => {
+    ctx.beginPath()
+    ctx.moveTo(x1, y1)
+    ctx.lineTo(x2, y2)
+    ctx.moveTo(x1, y1)
+    ctx.lineTo(x3, y3)
+    ctx.stroke()
+  })
+}
+
+function drawCanvasStickers(ctx: CanvasRenderingContext2D, pack: StickerPackId, width: number, height: number) {
+  if (pack === 'none') {
+    return
+  }
+
+  if (pack === 'stars') {
+    drawCenteredPixelPattern(ctx, STAR, { y: 'var(--mustard)', '.': 'transparent' }, 32, 30, 5)
+    drawCenteredPixelPattern(ctx, STAR, { y: 'var(--burnt)', '.': 'transparent' }, width - 32, 30, 5)
+    drawCenteredPixelPattern(ctx, STAR, { y: 'var(--mustard)', '.': 'transparent' }, 24, height - 24, 4)
+    drawCenteredPixelPattern(ctx, STAR, { y: 'var(--olive)', '.': 'transparent' }, width - 24, height - 24, 4)
+    drawCenteredPixelPattern(ctx, STAR, { y: 'var(--mustard)', '.': 'transparent' }, width / 2, 28, 6)
+  }
+
+  if (pack === 'hearts') {
+    drawCenteredPixelPattern(ctx, HEART, { r: 'var(--burnt)', '.': 'transparent' }, 34, 30, 6)
+    drawCenteredPixelPattern(ctx, HEART, { r: 'var(--burnt)', '.': 'transparent' }, width - 34, 30, 6)
+    drawCenteredPixelPattern(ctx, HEART, { r: 'var(--mustard)', '.': 'transparent' }, 28, height - 28, 5)
+    drawCenteredPixelPattern(ctx, HEART, { r: 'var(--mustard)', '.': 'transparent' }, width - 28, height - 28, 5)
+    drawStickerText(ctx, 'XOXO', width / 2, height - 18, 10, 'var(--burnt)')
+  }
+
+  if (pack === 'confetti') {
+    const pieces = [
+      { x: 18, y: 12, w: 18, h: 18, c: 'var(--mustard)', r: 0.3 },
+      { x: 54, y: 10, w: 13, h: 22, c: 'var(--burnt)', r: -0.4 },
+      { x: 92, y: 14, w: 20, h: 13, c: 'var(--olive)', r: 0.5 },
+      { x: width - 38, y: 12, w: 18, h: 18, c: 'var(--blue)', r: -0.2 },
+      { x: width - 78, y: 10, w: 13, h: 22, c: 'var(--mustard)', r: 0.4 },
+      { x: width - 118, y: 14, w: 20, h: 13, c: 'var(--burnt)', r: -0.5 },
+      { x: 24, y: height - 30, w: 18, h: 18, c: 'var(--olive)', r: -0.3 },
+      { x: 66, y: height - 30, w: 14, h: 22, c: 'var(--blue)', r: 0.35 },
+      { x: width - 44, y: height - 30, w: 18, h: 18, c: 'var(--burnt)', r: 0.25 },
+      { x: width - 90, y: height - 28, w: 22, h: 14, c: 'var(--mustard)', r: -0.45 },
+      { x: 6, y: height * 0.25, w: 14, h: 14, c: 'var(--mustard)', r: 0.35 },
+      { x: 8, y: height * 0.55, w: 18, h: 12, c: 'var(--blue)', r: -0.25 },
+      { x: width - 22, y: height * 0.35, w: 14, h: 18, c: 'var(--burnt)', r: 0.2 },
+      { x: width - 26, y: height * 0.68, w: 18, h: 12, c: 'var(--olive)', r: -0.35 },
+    ]
+
+    pieces.forEach(piece => drawRotatedRect(ctx, piece.x, piece.y, piece.w, piece.h, piece.c, piece.r))
+  }
+
+  if (pack === 'filmstrip') {
+    ctx.fillStyle = resolveCanvasColor('var(--ink)')
+    ctx.fillRect(0, 0, width, 24)
+    ctx.fillRect(0, height - 24, width, 24)
+    ctx.fillRect(0, 0, 24, height)
+    ctx.fillRect(width - 24, 0, 24, height)
+    drawFilmPerfs(ctx, 0, 0, width, 24, 12, true)
+    drawFilmPerfs(ctx, 0, height - 24, width, 24, 12, true)
+    drawFilmPerfs(ctx, 0, 0, 24, height, 12, false)
+    drawFilmPerfs(ctx, width - 24, 0, 24, height, 12, false)
+  }
+
+  if (pack === 'gamer') {
+    drawRotatedRect(ctx, width / 2 - 88, 8, 176, 28, 'var(--mustard)', 0, 1)
+    drawStickerText(ctx, 'PLAYER 1', width / 2, 23, 11, 'var(--ink)')
+    drawRotatedRect(ctx, width - 70, 16, 54, 36, 'var(--olive)', 0.12, 1)
+    drawStickerText(ctx, '1UP', width - 43, 34, 13, 'var(--ivory)', 0.12)
+    drawCenteredPixelPattern(ctx, MUSHROOM, { r: 'var(--burnt)', w: 'var(--ivory)', b: 'var(--ink)', '.': 'transparent' }, 36, height - 40, 5)
+    drawStickerText(ctx, 'HI-SCORE', width / 2, height - 18, 10, 'var(--mustard)')
+  }
+
+  if (pack === 'retro') {
+    drawCornerBrackets(ctx, width, height)
+    drawStickerText(ctx, 'PIXEL PERFECT', width / 2, 18, 9, 'var(--burnt)', -0.03)
+    drawStickerText(ctx, new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase(), width / 2, height - 16, 8, 'var(--blue)', 0.03)
+  }
+
+  if (pack === 'bloom') {
+    drawCenteredPixelPattern(ctx, FLOWER, { r: 'var(--burnt)', Y: 'var(--mustard)', '.': 'transparent' }, 32, 32, 7)
+    drawCenteredPixelPattern(ctx, FLOWER, { r: 'var(--blue)', Y: 'var(--ivory)', '.': 'transparent' }, width - 32, 32, 7)
+    drawCenteredPixelPattern(ctx, FLOWER, { r: 'var(--olive)', Y: 'var(--mustard)', '.': 'transparent' }, 32, height - 32, 7)
+    drawCenteredPixelPattern(ctx, FLOWER, { r: 'var(--mustard)', Y: 'var(--ivory)', '.': 'transparent' }, width - 32, height - 32, 7)
+    drawCenteredPixelPattern(ctx, FLOWER, { r: 'var(--burnt)', Y: 'var(--ivory)', '.': 'transparent' }, width / 2, 28, 6)
+  }
+
+  if (pack === 'tape') {
+    drawRotatedRect(ctx, 20, 10, 78, 22, 'var(--mustard)', -0.12, 0.88)
+    drawRotatedRect(ctx, width - 98, 12, 78, 22, 'var(--blue)', 0.1, 0.8)
+    drawRotatedRect(ctx, 24, height - 34, 78, 22, 'var(--burnt)', 0.08, 0.82)
+    drawRotatedRect(ctx, width - 102, height - 34, 78, 22, 'var(--olive)', -0.1, 0.8)
+    drawRotatedRect(ctx, 0, height * 0.42, 46, 20, 'var(--mustard)', -0.04, 0.75)
+    drawRotatedRect(ctx, width - 46, height * 0.42, 46, 20, 'var(--burnt)', 0.04, 0.75)
+  }
+
+  if (pack === 'glitter') {
+    const sparks = [
+      { x: 30, y: 22, c: 'var(--mustard)', s: 5 },
+      { x: 78, y: 22, c: 'var(--ivory)', s: 4 },
+      { x: width - 34, y: 24, c: 'var(--burnt)', s: 5 },
+      { x: width - 82, y: 22, c: 'var(--blue)', s: 4 },
+      { x: width / 2, y: 24, c: 'var(--mustard)', s: 6 },
+      { x: 34, y: height - 24, c: 'var(--burnt)', s: 5 },
+      { x: 86, y: height - 22, c: 'var(--mustard)', s: 4 },
+      { x: width - 38, y: height - 24, c: 'var(--mustard)', s: 5 },
+      { x: width - 88, y: height - 22, c: 'var(--ivory)', s: 4 },
+      { x: 12, y: height * 0.2, c: 'var(--mustard)', s: 4 },
+      { x: 12, y: height * 0.5, c: 'var(--blue)', s: 4 },
+      { x: 12, y: height * 0.8, c: 'var(--burnt)', s: 4 },
+      { x: width - 12, y: height * 0.2, c: 'var(--burnt)', s: 4 },
+      { x: width - 12, y: height * 0.5, c: 'var(--mustard)', s: 4 },
+      { x: width - 12, y: height * 0.8, c: 'var(--ivory)', s: 4 },
+    ]
+
+    sparks.forEach(spark => {
+      drawCenteredPixelPattern(ctx, DIAMOND, { d: spark.c, '.': 'transparent' }, spark.x, spark.y, spark.s)
+    })
+  }
+}
+
 function isUploadResponse(value: unknown): value is { url: string } {
   return typeof value === 'object' && value !== null && 'url' in value && typeof value.url === 'string'
 }
@@ -372,7 +606,12 @@ function getDownloadUrl(url: string): string {
   return url.replace('/upload/', '/upload/fl_attachment:pixel-perfect-strip/')
 }
 
-export async function composeStrip(shots: CapturedShot[], layout: LayoutConfig, frameColor: string): Promise<string> {
+export async function composeStrip(
+  shots: CapturedShot[],
+  layout: LayoutConfig,
+  frameColor: string,
+  stickerPack: StickerPackId
+): Promise<string> {
   const { width, height } = getStripSize(layout)
   const padding = layout.id === 'S' ? 30 : 20
   const gap = layout.id === 'D' ? 16 : 20
@@ -425,6 +664,7 @@ export async function composeStrip(shots: CapturedShot[], layout: LayoutConfig, 
   ctx.fillStyle = resolveCanvasColor('var(--ivory)')
   ctx.font = '14px "Press Start 2P", monospace'
   ctx.fillText('PIXEL PERFECT', width / 2, height - 22)
+  drawCanvasStickers(ctx, stickerPack, width, height)
 
   return canvas.toDataURL('image/jpeg', 0.9)
 }
@@ -438,19 +678,21 @@ interface Props {
 
 export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Props) {
   const [frameColorId, setFrameColorId] = useState('ink')
-  const [stickers, setStickers] = useState('stars')
+  const [stickers, setStickers] = useState<StickerPackId>('stars')
   const [isUploading, setIsUploading] = useState(true)
   const [stripUrl, setStripUrl] = useState<string | null>(null)
-  const [sessionSaved, setSessionSaved] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
   const [emailInput, setEmailInput] = useState('')
   const [emailError, setEmailError] = useState<string | null>(null)
   const [emailSending, setEmailSending] = useState(false)
   const [keyboardOpen, setKeyboardOpen] = useState(false)
   const [printOpen, setPrintOpen] = useState(false)
+  const [exportSelected, setExportSelected] = useState(false)
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null)
   const [qrOpen, setQrOpen] = useState(false)
   const [qrError, setQrError] = useState<string | null>(null)
+  const sessionSavedRef = useRef(false)
+  const uploadRunRef = useRef(0)
   const { isMobile } = useBreakpoint()
 
   const frame = FRAME_COLORS.find(f => f.id === frameColorId) ?? FRAME_COLORS[0]
@@ -464,12 +706,15 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
     : (layout.single ? 260 : layout.count <= 2 ? 180 : layout.count >= 6 ? 110 : 150)
 
   useEffect(() => {
+    const uploadRun = uploadRunRef.current + 1
+    uploadRunRef.current = uploadRun
+
     async function saveStrip() {
       setIsUploading(true)
-      setSessionSaved(false)
+      setStripUrl(null)
 
       try {
-        const dataUrl = await composeStrip(shots, layout, frame.value)
+        const dataUrl = await composeStrip(shots, layout, frame.value, stickers)
         const uploadResponse = await fetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -481,36 +726,44 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
           throw new Error('Upload failed')
         }
 
-        setStripUrl(uploadData.url)
-
-        const sessionResponse = await fetch('/api/sessions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            layout_id: layout.id,
-            filter: shots[0]?.filter ?? 'none',
-            photo_urls: [],
-            strip_url: uploadData.url,
-            price: layout.price,
-            status: 'completed',
-            email: null,
-          }),
-        })
-
-        if (!sessionResponse.ok) {
-          throw new Error('Session save failed')
+        if (uploadRunRef.current !== uploadRun) {
+          return
         }
 
-        setSessionSaved(true)
+        setStripUrl(uploadData.url)
+
+        if (!sessionSavedRef.current) {
+          const sessionResponse = await fetch('/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              layout_id: layout.id,
+              filter: shots[0]?.filter ?? 'none',
+              photo_urls: [],
+              strip_url: uploadData.url,
+              price: layout.price,
+              status: 'completed',
+              email: null,
+            }),
+          })
+
+          if (!sessionResponse.ok) {
+            throw new Error('Session save failed')
+          }
+
+          sessionSavedRef.current = true
+        }
       } catch (error) {
         console.error(error)
       } finally {
-        setIsUploading(false)
+        if (uploadRunRef.current === uploadRun) {
+          setIsUploading(false)
+        }
       }
     }
 
     void saveStrip()
-  }, [])
+  }, [frame.value, layout, shots, stickers])
 
   useEffect(() => {
     async function createQrCode() {
@@ -549,6 +802,14 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
     setPrintOpen(true)
   }
 
+  function handlePrintClose() {
+    setPrintOpen(false)
+  }
+
+  function handlePrintConfirmed() {
+    setExportSelected(true)
+  }
+
   function handleQrCode() {
     if (!stripUrl) {
       window.alert('Still uploading...')
@@ -556,6 +817,7 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
     }
 
     setQrOpen(true)
+    setExportSelected(true)
   }
 
   function handleQrClose() {
@@ -568,8 +830,8 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
     }
   }
 
-  function handleEmailInputChange(event: React.ChangeEvent<HTMLInputElement>) {
-    setEmailInput(event.target.value)
+  function handleEmailChange(value: string) {
+    setEmailInput(value)
     setEmailError(null)
   }
 
@@ -607,6 +869,7 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
 
       setEmailInput(trimmed)
       setEmailSent(true)
+      setExportSelected(true)
       return true
     } catch (error) {
       console.error(error)
@@ -615,11 +878,6 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
     } finally {
       setEmailSending(false)
     }
-  }
-
-  function handleEmailSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    void handleSendEmail()
   }
 
   function handleKeyboardClose() {
@@ -633,19 +891,40 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
       }
     })
   }
+
+  function handlePlayAgain() {
+    if (exportSelected) {
+      onPlayAgain()
+    }
+  }
+
+  function getFrameColorClickHandler(id: string) {
+    return function handleFrameColorClick() {
+      setFrameColorId(id)
+      setExportSelected(false)
+    }
+  }
+
+  function getStickerClickHandler(id: StickerPackId) {
+    return function handleStickerClick() {
+      setStickers(id)
+      setExportSelected(false)
+    }
+  }
   return (
     <>
     {printOpen && stripUrl && (
       <PrintModal
         stripUrl={stripUrl}
         layout={layout}
-        onClose={() => setPrintOpen(false)}
+        onClose={handlePrintClose}
+        onPrint={handlePrintConfirmed}
       />
     )}
     {keyboardOpen && (
       <ArcadeKeyboard
         value={emailInput}
-        onChange={setEmailInput}
+        onChange={handleEmailChange}
         onClose={handleKeyboardClose}
         onSend={handleKeyboardSend}
         status={emailStatus}
@@ -850,10 +1129,10 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
             {[
-              { icon: 'PRINT', label: 'PRINT', accent: 'var(--mustard)', onClick: handlePrint, disabled: isUploading || !stripUrl },
-              { icon: 'QR', label: 'QR CODE', accent: 'var(--burnt)', onClick: handleQrCode, disabled: false },
-              { icon: 'MAIL', label: 'EMAIL', accent: 'var(--blue)', onClick: handleEmailButton, disabled: emailSent },
-              { icon: 'AGAIN', label: 'RETAKE', accent: 'var(--ivory)', onClick: onRetake, disabled: false },
+              { label: 'PRINT', accent: 'var(--mustard)', onClick: handlePrint, disabled: isUploading || !stripUrl },
+              { label: 'QR CODE', accent: 'var(--burnt)', onClick: handleQrCode, disabled: isUploading || !stripUrl },
+              { label: 'EMAIL', accent: 'var(--blue)', onClick: handleEmailButton, disabled: emailSent },
+              { label: 'RETAKE', accent: 'var(--ivory)', onClick: onRetake, disabled: false },
             ].map(btn => (
               <div
                 key={btn.label}
@@ -862,7 +1141,6 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
                   cursor: btn.disabled ? 'wait' : 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 8,
                   padding: '10px 14px',
                   background: 'var(--ivory)',
                   color: 'var(--ink)',
@@ -874,9 +1152,6 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
                   opacity: btn.disabled ? 0.55 : 1,
                 }}
               >
-                <span style={{ color: btn.accent === 'var(--ivory)' ? 'var(--ink)' : btn.accent, fontSize: 12 }}>
-                  {btn.icon}
-                </span>
                 {btn.label}
               </div>
             ))}
@@ -892,34 +1167,6 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
               SAVING YOUR STRIP...
             </div>
           )}
-
-          <form onSubmit={handleEmailSubmit} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <input
-              type="email"
-              placeholder="your@email.com"
-              value={emailInput}
-              onChange={handleEmailInputChange}
-              className="font-crt text-xl border-2 border-[var(--ink)] px-3 py-2 bg-[var(--ivory)]"
-              disabled={emailSent}
-            />
-            <button
-              type="submit"
-              className="font-arcade text-[10px] bg-[var(--ink)] text-[var(--mustard)] px-4 py-2"
-              disabled={emailSent || emailSending}
-            >
-              SEND
-            </button>
-            {emailSent && (
-              <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: 'var(--olive)', alignSelf: 'center' }}>
-                ✓ SENT!
-              </span>
-            )}
-            {emailError && (
-              <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: 'var(--burnt)', alignSelf: 'center' }}>
-                {emailError}
-              </span>
-            )}
-          </form>
 
         </div>
 
@@ -962,7 +1209,7 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
                 return (
                   <div
                     key={c.id}
-                    onClick={() => setFrameColorId(c.id)}
+                    onClick={getFrameColorClickHandler(c.id)}
                     style={{
                       cursor: 'pointer',
                       padding: '10px 8px',
@@ -1000,7 +1247,7 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
                 return (
                   <div
                     key={s.id}
-                    onClick={() => setStickers(s.id)}
+                    onClick={getStickerClickHandler(s.id)}
                     style={{
                       cursor: 'pointer',
                       padding: '10px 6px',
@@ -1091,18 +1338,19 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
           </ArcadePanel>
 
           <div
-            onClick={onPlayAgain}
+            onClick={handlePlayAgain}
             style={{
-              cursor: 'pointer',
+              cursor: exportSelected ? 'pointer' : 'not-allowed',
               padding: '16px 22px',
               textAlign: 'center',
               background: 'var(--ink)',
-              color: 'var(--mustard)',
+              color: exportSelected ? 'var(--mustard)' : 'rgba(255,206,27,0.45)',
               fontFamily: "'Press Start 2P', monospace",
               fontSize: 13,
               letterSpacing: '0.2em',
               border: '3px solid var(--mustard)',
-              boxShadow: '6px 6px 0 var(--mustard)',
+              boxShadow: exportSelected ? '6px 6px 0 var(--mustard)' : '3px 3px 0 rgba(255,206,27,0.45)',
+              opacity: exportSelected ? 1 : 0.65,
             }}
           >
             ▶ PLAY AGAIN

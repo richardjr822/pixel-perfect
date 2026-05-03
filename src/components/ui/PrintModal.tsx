@@ -10,9 +10,10 @@ interface Props {
   stripUrl: string
   layout: LayoutConfig
   onClose: () => void
+  onPrint: () => void
 }
 
-export function PrintModal({ stripUrl, layout, onClose }: Props) {
+export function PrintModal({ stripUrl, layout, onClose, onPrint }: Props) {
   const [quantity, setQuantity] = useState<Quantity>(2)
   const [printing, setPrinting] = useState(false)
 
@@ -23,6 +24,7 @@ export function PrintModal({ stripUrl, layout, onClose }: Props) {
 
   function handlePrint() {
     setPrinting(true)
+    onPrint()
 
     const frame = document.createElement('div')
     frame.className = 'print-frame'
