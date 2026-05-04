@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import type { CSSProperties, KeyboardEvent } from 'react'
+import type { CSSProperties, FormEvent, KeyboardEvent } from 'react'
 
 const ROWS = [
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
@@ -48,14 +48,20 @@ export function ArcadeKeyboard({ value, onChange, onSend, onClose, status }: Arc
   function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Enter') {
       event.preventDefault()
-      if (status !== 'sending') {
-        onSend()
-      }
+      handleSubmit()
     }
 
     if (event.key === 'Escape') {
       event.preventDefault()
       onClose()
+    }
+  }
+
+  function handleSubmit(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault()
+
+    if (status !== 'sending') {
+      onSend()
     }
   }
 
@@ -89,7 +95,10 @@ export function ArcadeKeyboard({ value, onChange, onSend, onClose, status }: Arc
         padding: '0 0 32px',
       }}
     >
-      <div style={{
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        style={{
         width: '100%',
         maxWidth: 680,
         background: 'var(--blue)',
@@ -114,21 +123,24 @@ export function ArcadeKeyboard({ value, onChange, onSend, onClose, status }: Arc
           }}>
             ✉ ENTER YOUR EMAIL
           </div>
-          <div
+          <button
+            type="button"
             onClick={onClose}
             style={{
               fontFamily: "'Press Start 2P', monospace",
               fontSize: 10,
               color: 'var(--ivory)',
+              background: 'transparent',
               cursor: 'pointer',
               padding: '6px 10px',
               border: '2px solid var(--ivory)',
               letterSpacing: '0.1em',
               opacity: 0.75,
+              appearance: 'none',
             }}
           >
             ✕ CLOSE
-          </div>
+          </button>
         </div>
 
         {/* Email input */}
@@ -153,6 +165,7 @@ export function ArcadeKeyboard({ value, onChange, onSend, onClose, status }: Arc
             autoCorrect="off"
             spellCheck={false}
             inputMode="email"
+            enterKeyHint="send"
             maxLength={254}
             aria-label="Email address"
             style={{
@@ -257,8 +270,9 @@ export function ArcadeKeyboard({ value, onChange, onSend, onClose, status }: Arc
           >
             ⌫
           </div>
-          <div
-            onClick={status === 'sending' ? undefined : onSend}
+          <button
+            type="submit"
+            disabled={status === 'sending'}
             style={{
               ...keyBase,
               background: status === 'error' ? 'var(--burnt)' : 'var(--mustard)',
@@ -269,10 +283,11 @@ export function ArcadeKeyboard({ value, onChange, onSend, onClose, status }: Arc
               letterSpacing: '0.12em',
               opacity: status === 'sending' ? 0.6 : 1,
               cursor: status === 'sending' ? 'wait' : 'pointer',
+              appearance: 'none',
             }}
           >
             {status === 'sending' ? '...' : status === 'error' ? 'RETRY' : 'SEND →'}
-          </div>
+          </button>
         </div>
 
         {status === 'error' && (
@@ -286,7 +301,7 @@ export function ArcadeKeyboard({ value, onChange, onSend, onClose, status }: Arc
             DELIVERY FAILED — CHECK EMAIL AND RETRY
           </div>
         )}
-      </div>
+      </form>
     </div>
   )
 }
