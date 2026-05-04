@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function PrintModal({ stripUrl, layout, onClose, onPrint }: Props) {
-  const [quantity, setQuantity] = useState<Quantity>(2)
+  const [quantity, setQuantity] = useState<Quantity>(1)
   const [printing, setPrinting] = useState(false)
 
   const isSingle = layout.id === 'S'
@@ -36,6 +36,7 @@ export function PrintModal({ stripUrl, layout, onClose, onPrint }: Props) {
       img.className = 'print-strip'
       img.style.width = stripWidth
       img.style.height = '6in'
+      img.style.objectFit = 'contain'
       frame.appendChild(img)
     }
 
@@ -132,7 +133,7 @@ export function PrintModal({ stripUrl, layout, onClose, onPrint }: Props) {
               overflow: 'hidden',
               background: 'white',
               width: isSingle ? 120 : 80,
-              height: isSingle ? 90 : 240,
+              height: isSingle ? 183 : 240,
             }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img

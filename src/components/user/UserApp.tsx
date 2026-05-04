@@ -28,7 +28,7 @@ export function UserApp({ onAdminUnlock }: UserAppProps) {
   }
 
   return (
-    <div className="w-screen h-screen overflow-hidden bg-[var(--ink)] relative">
+    <div className="app-shell">
       {screen === 'attract' && (
         <AttractScreen onStart={handleStart} onAdminUnlock={onAdminUnlock} />
       )}

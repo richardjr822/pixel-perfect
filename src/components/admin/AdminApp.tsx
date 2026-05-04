@@ -136,9 +136,7 @@ export function AdminApp() {
   )
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
+    <div className="app-fixed" style={{
       display: 'grid',
       gridTemplateColumns: isMobile ? '1fr' : '240px 1fr',
       background: 'var(--ivory)',

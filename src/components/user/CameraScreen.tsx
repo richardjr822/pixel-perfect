@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CapturedShot, FilterId, LayoutConfig } from '@/types'
 import { FILTERS } from '@/lib/layouts'
+import { SOLO_SHOT_BORDER } from '@/lib/borders'
 import { FlowChrome } from '@/components/ui/FlowChrome'
 import { ArcadePanel } from '@/components/ui/ArcadePanel'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 const FILTER_IDS = Object.keys(FILTERS) as FilterId[]
+const SOLO_SHOT_PHOTO_ASPECT = SOLO_SHOT_BORDER.photo.width / SOLO_SHOT_BORDER.photo.height
 
 interface Props {
   layout: LayoutConfig
@@ -40,13 +42,22 @@ export function CameraScreen({
   const [flashing, setFlashing] = useState(false)
   const [shots, setShots] = useState<CapturedShot[]>([])
   const [cameraError, setCameraError] = useState<string | null>(null)
+  const showSoloShotScope = layout.id === 'S'
 
   useEffect(() => { shotsRef.current = shots }, [shots])
 
   useEffect(() => {
     let active = true
     navigator.mediaDevices
-      .getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 960 }, facingMode: 'user' } })
+      .getUserMedia({
+        audio: false,
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 960 },
+          aspectRatio: { ideal: 4 / 3 },
+          facingMode: { ideal: 'user' },
+        },
+      })
       .then(stream => {
         if (!active) { stream.getTracks().forEach(t => t.stop()); return }
         streamRef.current = stream
@@ -82,8 +93,10 @@ export function CameraScreen({
       const id = setTimeout(() => setCount(c => c - 1), 900)
       return () => clearTimeout(id)
     }
-    setFlashing(true)
     const dataUrl = captureFrame()
+    const t0 = setTimeout(() => {
+      setFlashing(true)
+    }, 0)
     const t1 = setTimeout(() => {
       setShots(prev => [...prev, { dataUrl, filter: photoFilter, pose: shotIdx % 4 }])
     }, 200)
@@ -92,7 +105,7 @@ export function CameraScreen({
       setShotIdx(i => i + 1)
       setCount(countdownSec)
     }, 700)
-    return () => { clearTimeout(t1); clearTimeout(t2) }
+    return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2) }
   }, [started, count, shotIdx]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function startSession() {
@@ -177,11 +190,37 @@ export function CameraScreen({
               />
             )}
 
+            {showSoloShotScope && !cameraError && (
+              <div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                  display: 'flex',
+                  justifyContent: 'center',
+                }}
+              >
+                <div style={{
+                  width: `${SOLO_SHOT_PHOTO_ASPECT * 75}%`,
+                  height: '100%',
+                  maxWidth: '100%',
+                  boxShadow: '0 0 0 999px rgba(0,0,0,0.7)',
+                  borderLeft: '3px dashed rgba(255,206,27,0.85)',
+                  borderRight: '3px dashed rgba(255,206,27,0.85)',
+                  outline: '2px solid rgba(232,230,216,0.5)',
+                  outlineOffset: -2,
+                }} />
+              </div>
+            )}
+
             {/* HUD */}
             <div style={{
               position: 'absolute',
               top: 14,
               left: 14,
+              zIndex: 2,
               fontFamily: "'Press Start 2P', monospace",
               fontSize: 11,
               color: 'var(--mustard)',
@@ -194,6 +233,7 @@ export function CameraScreen({
               position: 'absolute',
               top: 14,
               right: 14,
+              zIndex: 2,
               fontFamily: "'Press Start 2P', monospace",
               fontSize: 11,
               color: 'var(--ivory)',
@@ -208,6 +248,7 @@ export function CameraScreen({
               <div style={{
                 position: 'absolute',
                 inset: 0,
+                zIndex: 3,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -232,6 +273,7 @@ export function CameraScreen({
               <div style={{
                 position: 'absolute',
                 inset: 0,
+                zIndex: 3,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -253,6 +295,7 @@ export function CameraScreen({
               <div style={{
                 position: 'absolute',
                 inset: 0,
+                zIndex: 4,
                 background: 'rgba(0,0,0,0.55)',
                 display: 'flex',
                 flexDirection: 'column',
@@ -274,18 +317,19 @@ export function CameraScreen({
                   fontSize: 24,
                   color: 'var(--ivory)',
                 }}>
-                  press START CAPTURE when you're ready
+                  press START CAPTURE when you are ready
                 </div>
               </div>
             )}
 
             {/* Flash */}
-            {flashing && <div style={{ position: 'absolute', inset: 0, background: 'var(--ivory)' }} />}
+            {flashing && <div style={{ position: 'absolute', inset: 0, zIndex: 5, background: 'var(--ivory)' }} />}
 
             {/* Scanlines */}
             <div style={{
               position: 'absolute',
               inset: 0,
+              zIndex: 6,
               pointerEvents: 'none',
               backgroundImage: 'repeating-linear-gradient(to bottom, rgba(0,0,0,0.25) 0px, rgba(0,0,0,0.25) 1px, transparent 1px, transparent 3px)',
               mixBlendMode: 'multiply',

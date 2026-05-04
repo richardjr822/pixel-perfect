@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import QRCode from 'qrcode'
 import type { CapturedShot, LayoutConfig } from '@/types'
 import { FILTERS } from '@/lib/layouts'
+import { SOLO_SHOT_BORDER } from '@/lib/borders'
 import { FlowChrome } from '@/components/ui/FlowChrome'
 import { ArcadePanel } from '@/components/ui/ArcadePanel'
 import { ArcadeKeyboard } from '@/components/ui/ArcadeKeyboard'
@@ -67,6 +69,7 @@ const FRAME_COLORS = [
 ]
 
 type StickerPackId = (typeof STICKER_PACKS)[number]['id']
+type SoloShotStyle = 'border' | 'default'
 
 const STICKER_PACKS = [
   { id: 'none',      label: 'NONE' },
@@ -80,6 +83,8 @@ const STICKER_PACKS = [
   { id: 'tape',      label: 'TAPE' },
   { id: 'glitter',   label: 'GLITTER' },
 ] as const
+
+type UploadedUrl = string
 
 function StickerOverlay({ pack }: { pack: StickerPackId }) {
   if (pack === 'none') return null
@@ -320,7 +325,11 @@ function resolveCanvasColor(cssValue: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(match[1]).trim()
 }
 
-function getStripSize(layout: LayoutConfig): { width: number; height: number } {
+function getStripSize(layout: LayoutConfig, useSoloShotBorder = false): { width: number; height: number } {
+  if (layout.id === 'S' && useSoloShotBorder) {
+    return { width: SOLO_SHOT_BORDER.width, height: SOLO_SHOT_BORDER.height }
+  }
+
   if (layout.id === 'S') {
     return { width: 600, height: 420 }
   }
@@ -330,6 +339,16 @@ function getStripSize(layout: LayoutConfig): { width: number; height: number } {
   }
 
   return { width: 400, height: layout.count * 220 + 40 }
+}
+
+function loadCanvasImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error(`Image failed to load: ${src}`))
+    image.src = src
+  })
 }
 
 function drawImageCover(
@@ -598,6 +617,21 @@ function isErrorResponse(value: unknown): value is { error: string } {
   return typeof value === 'object' && value !== null && 'error' in value && typeof value.error === 'string'
 }
 
+async function uploadBase64Asset(base64: string, folder: string): Promise<UploadedUrl> {
+  const uploadResponse = await fetch('/api/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ base64, folder }),
+  })
+  const uploadData: unknown = await uploadResponse.json()
+
+  if (!uploadResponse.ok || !isUploadResponse(uploadData)) {
+    throw new Error('Upload failed')
+  }
+
+  return uploadData.url
+}
+
 function getDownloadUrl(url: string): string {
   if (!url.includes('/upload/')) {
     return url
@@ -606,13 +640,44 @@ function getDownloadUrl(url: string): string {
   return url.replace('/upload/', '/upload/fl_attachment:pixel-perfect-strip/')
 }
 
+async function drawSoloShotStrip(
+  ctx: CanvasRenderingContext2D,
+  shots: CapturedShot[],
+  frameColor: string
+) {
+  const shot = shots[0]
+
+  ctx.fillStyle = resolveCanvasColor(frameColor)
+  ctx.fillRect(0, 0, SOLO_SHOT_BORDER.width, SOLO_SHOT_BORDER.height)
+
+  if (shot?.dataUrl) {
+    const image = await loadCanvasImage(shot.dataUrl)
+
+    ctx.save()
+    ctx.filter = FILTERS[shot.filter].css
+    drawImageCover(
+      ctx,
+      image,
+      SOLO_SHOT_BORDER.photo.x,
+      SOLO_SHOT_BORDER.photo.y,
+      SOLO_SHOT_BORDER.photo.width,
+      SOLO_SHOT_BORDER.photo.height
+    )
+    ctx.restore()
+  }
+
+  const border = await loadCanvasImage(SOLO_SHOT_BORDER.src)
+  ctx.drawImage(border, 0, 0, SOLO_SHOT_BORDER.width, SOLO_SHOT_BORDER.height)
+}
+
 export async function composeStrip(
   shots: CapturedShot[],
   layout: LayoutConfig,
   frameColor: string,
-  stickerPack: StickerPackId
+  stickerPack: StickerPackId,
+  useSoloShotBorder = false
 ): Promise<string> {
-  const { width, height } = getStripSize(layout)
+  const { width, height } = getStripSize(layout, useSoloShotBorder)
   const padding = layout.id === 'S' ? 30 : 20
   const gap = layout.id === 'D' ? 16 : 20
   const footerHeight = layout.id === 'S' ? 44 : 40
@@ -629,6 +694,12 @@ export async function composeStrip(
 
   canvas.width = width
   canvas.height = height
+
+  if (layout.id === 'S' && useSoloShotBorder) {
+    await drawSoloShotStrip(ctx, shots, frameColor)
+    return canvas.toDataURL('image/jpeg', 0.9)
+  }
+
   ctx.fillStyle = resolveCanvasColor(frameColor)
   ctx.fillRect(0, 0, width, height)
 
@@ -638,9 +709,7 @@ export async function composeStrip(
       return
     }
 
-    const image = new Image()
-
-    image.onload = () => {
+    loadCanvasImage(shot.dataUrl).then((image) => {
       const column = index % columns
       const row = Math.floor(index / columns)
       const x = padding + column * (slotWidth + gap)
@@ -654,10 +723,7 @@ export async function composeStrip(
       ctx.lineWidth = 4
       ctx.strokeRect(x, y, slotWidth, slotHeight)
       resolve()
-    }
-
-    image.onerror = () => resolve()
-    image.src = shot.dataUrl
+    }).catch(() => resolve())
   })))
 
   ctx.textAlign = 'center'
@@ -677,6 +743,7 @@ interface Props {
 }
 
 export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Props) {
+  const [soloShotStyle, setSoloShotStyle] = useState<SoloShotStyle>(layout.id === 'S' ? 'border' : 'default')
   const [frameColorId, setFrameColorId] = useState('ink')
   const [stickers, setStickers] = useState<StickerPackId>('stars')
   const [isUploading, setIsUploading] = useState(true)
@@ -693,6 +760,8 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
   const [qrError, setQrError] = useState<string | null>(null)
   const sessionSavedRef = useRef(false)
   const uploadRunRef = useRef(0)
+  const photoUrlsRef = useRef<string[] | null>(null)
+  const photoUploadPromiseRef = useRef<Promise<string[]> | null>(null)
   const { isMobile } = useBreakpoint()
 
   const frame = FRAME_COLORS.find(f => f.id === frameColorId) ?? FRAME_COLORS[0]
@@ -704,6 +773,44 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
   const slotH = isMobile
     ? (layout.single ? 160 : layout.count <= 2 ? 120 : layout.count >= 6 ? 80 : 100)
     : (layout.single ? 260 : layout.count <= 2 ? 180 : layout.count >= 6 ? 110 : 150)
+  const usesSoloShotBorder = layout.id === 'S' && soloShotStyle === 'border'
+  const soloPreviewWidth = isMobile ? 230 : 330
+  const soloPreviewHeight = Math.round(soloPreviewWidth * SOLO_SHOT_BORDER.height / SOLO_SHOT_BORDER.width)
+  const soloPhotoStyle = {
+    position: 'absolute',
+    left: `${(SOLO_SHOT_BORDER.photo.x / SOLO_SHOT_BORDER.width) * 100}%`,
+    top: `${(SOLO_SHOT_BORDER.photo.y / SOLO_SHOT_BORDER.height) * 100}%`,
+    width: `${(SOLO_SHOT_BORDER.photo.width / SOLO_SHOT_BORDER.width) * 100}%`,
+    height: `${(SOLO_SHOT_BORDER.photo.height / SOLO_SHOT_BORDER.height) * 100}%`,
+    overflow: 'hidden',
+    background: 'var(--ink)',
+  } satisfies CSSProperties
+
+  const getUploadedPhotoUrls = useCallback((): Promise<string[]> => {
+    if (photoUrlsRef.current) {
+      return Promise.resolve(photoUrlsRef.current)
+    }
+
+    if (!photoUploadPromiseRef.current) {
+      photoUploadPromiseRef.current = Promise.all(
+        shots.map((shot, index) => (
+          shot.dataUrl
+            ? uploadBase64Asset(shot.dataUrl, `pixel-perfect/photos/${layout.id.toLowerCase()}`).then(url => ({ index, url }))
+            : Promise.resolve(null)
+        ))
+      ).then((uploaded) => {
+        const urls = uploaded
+          .filter((item): item is { index: number; url: string } => item !== null)
+          .sort((left, right) => left.index - right.index)
+          .map(item => item.url)
+
+        photoUrlsRef.current = urls
+        return urls
+      })
+    }
+
+    return photoUploadPromiseRef.current
+  }, [layout.id, shots])
 
   useEffect(() => {
     const uploadRun = uploadRunRef.current + 1
@@ -714,23 +821,17 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
       setStripUrl(null)
 
       try {
-        const dataUrl = await composeStrip(shots, layout, frame.value, stickers)
-        const uploadResponse = await fetch('/api/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64: dataUrl, folder: 'pixel-perfect/strips' }),
-        })
-        const uploadData: unknown = await uploadResponse.json()
-
-        if (!uploadResponse.ok || !isUploadResponse(uploadData)) {
-          throw new Error('Upload failed')
-        }
+        const dataUrl = await composeStrip(shots, layout, frame.value, stickers, usesSoloShotBorder)
+        const [stripUrl, photoUrls] = await Promise.all([
+          uploadBase64Asset(dataUrl, 'pixel-perfect/strips'),
+          getUploadedPhotoUrls(),
+        ])
 
         if (uploadRunRef.current !== uploadRun) {
           return
         }
 
-        setStripUrl(uploadData.url)
+        setStripUrl(stripUrl)
 
         if (!sessionSavedRef.current) {
           const sessionResponse = await fetch('/api/sessions', {
@@ -739,8 +840,8 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
             body: JSON.stringify({
               layout_id: layout.id,
               filter: shots[0]?.filter ?? 'none',
-              photo_urls: [],
-              strip_url: uploadData.url,
+              photo_urls: photoUrls,
+              strip_url: stripUrl,
               price: layout.price,
               status: 'completed',
               email: null,
@@ -763,7 +864,7 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
     }
 
     void saveStrip()
-  }, [frame.value, layout, shots, stickers])
+  }, [frame.value, getUploadedPhotoUrls, layout, shots, stickers, usesSoloShotBorder])
 
   useEffect(() => {
     async function createQrCode() {
@@ -911,6 +1012,13 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
       setExportSelected(false)
     }
   }
+
+  function getSoloShotStyleClickHandler(style: SoloShotStyle) {
+    return function handleSoloShotStyleClick() {
+      setSoloShotStyle(style)
+      setExportSelected(false)
+    }
+  }
   return (
     <>
     {printOpen && stripUrl && (
@@ -1047,6 +1155,48 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
 
           {/* Animated strip */}
           <div className="animate-strip-drop">
+            {usesSoloShotBorder ? (
+              <div style={{
+                width: soloPreviewWidth,
+                height: soloPreviewHeight,
+                border: '4px solid var(--ink)',
+                boxShadow: '10px 10px 0 var(--ink)',
+                position: 'relative',
+                overflow: 'hidden',
+                background: frame.value,
+              }}>
+                <div style={soloPhotoStyle}>
+                  {shots[0]?.dataUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={shots[0].dataUrl}
+                      alt="Solo shot"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block',
+                        filter: FILTERS[shots[0].filter].css,
+                      }}
+                    />
+                  ) : null}
+                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={SOLO_SHOT_BORDER.src}
+                  alt=""
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'block',
+                    pointerEvents: 'none',
+                  }}
+                />
+              </div>
+            ) : (
             <div style={{
               background: frame.value,
               padding: 18,
@@ -1125,6 +1275,7 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
                 {new Date().toLocaleDateString()}
               </div>
             </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -1188,10 +1339,55 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
               opacity: 0.7,
               marginTop: 4,
             }}>
-              pick a frame & sticker pack — then take it home.
+              {usesSoloShotBorder ? 'solo shot border ready — then take it home.' : 'pick a frame & sticker pack — then take it home.'}
             </div>
           </ArcadePanel>
 
+          {layout.id === 'S' && (
+            <ArcadePanel>
+              <div style={{
+                fontFamily: "'Press Start 2P', monospace",
+                fontSize: 11,
+                color: 'var(--ink)',
+                letterSpacing: '0.2em',
+                marginBottom: 12,
+              }}>
+                ▸ STYLE
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                {([
+                  { id: 'border', label: 'EXPO 2026 SPECIAL' },
+                  { id: 'default', label: 'CUSTOMIZE' },
+                ] satisfies Array<{ id: SoloShotStyle; label: string }>).map(option => {
+                  const active = soloShotStyle === option.id
+                  return (
+                    <div
+                      key={option.id}
+                      onClick={getSoloShotStyleClickHandler(option.id)}
+                      style={{
+                        cursor: 'pointer',
+                        padding: '10px 8px',
+                        background: active ? 'var(--ink)' : 'var(--ivory)',
+                        color: active ? 'var(--mustard)' : 'var(--ink)',
+                        border: `3px solid ${active ? 'var(--mustard)' : 'var(--ink)'}`,
+                        boxShadow: active ? '3px 3px 0 var(--mustard)' : '3px 3px 0 var(--ink)',
+                        fontFamily: "'Press Start 2P', monospace",
+                        fontSize: 9,
+                        letterSpacing: '0.1em',
+                        textAlign: 'center',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {option.label}
+                    </div>
+                  )
+                })}
+              </div>
+            </ArcadePanel>
+          )}
+
+          {!usesSoloShotBorder && (
+            <>
           {/* Frame color */}
           <ArcadePanel>
             <div style={{
@@ -1267,6 +1463,8 @@ export function StripPreviewScreen({ shots, layout, onRetake, onPlayAgain }: Pro
               })}
             </div>
           </ArcadePanel>
+            </>
+          )}
 
           <ArcadePanel>
             <div style={{

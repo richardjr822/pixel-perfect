@@ -35,6 +35,56 @@ function isWithinDays(date: Date, days: number): boolean {
   return date >= start && date <= now
 }
 
+function getAttachmentUrl(url: string, label: string): string {
+  if (!url.includes('/upload/')) {
+    return url
+  }
+
+  const filename = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'pixel-perfect'
+
+  return url.replace('/upload/', `/upload/fl_attachment:${filename}/`)
+}
+
+function MediaItem({ url, label }: { url: string; label: string }) {
+  return (
+    <a
+      href={getAttachmentUrl(url, label)}
+      download
+      target="_blank"
+      rel="noreferrer"
+      style={{
+        display: 'inline-flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 4,
+        color: 'var(--ink)',
+        textDecoration: 'none',
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt={label}
+        style={{
+          width: 56,
+          height: 56,
+          objectFit: 'cover',
+          background: 'var(--ink)',
+          border: '2px solid var(--ink)',
+          display: 'block',
+        }}
+      />
+      <span style={{
+        fontFamily: "'Press Start 2P', monospace",
+        fontSize: 6,
+        letterSpacing: '0.08em',
+      }}>
+        {label}
+      </span>
+    </a>
+  )
+}
+
 export function AdminSessions() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
@@ -155,14 +205,14 @@ export function AdminSessions() {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: "'VT323', monospace", fontSize: 20, color: 'var(--ink)' }}>
         <thead>
           <tr style={{ background: 'var(--ink)' }}>
-            {['SESSION', 'LAYOUT', 'FILTER', 'TIME', 'PAID', 'STATUS'].map((h, i) => (
+            {['SESSION', 'MEDIA', 'LAYOUT', 'FILTER', 'TIME', 'PAID', 'STATUS'].map((h, i) => (
               <th key={h} style={{
                 fontFamily: "'Press Start 2P', monospace",
                 fontSize: 9,
                 color: 'var(--mustard)',
                 padding: '10px 12px',
                 letterSpacing: '0.2em',
-                textAlign: i >= 4 ? 'center' : 'left',
+                textAlign: i >= 5 ? 'center' : 'left',
                 fontWeight: 'normal',
               }}>
                 {h}
@@ -177,6 +227,17 @@ export function AdminSessions() {
               borderBottom: '1px dashed rgba(0,0,0,0.18)',
             }}>
               <td style={{ padding: '10px 12px', fontWeight: 'bold' }}>{session.id.slice(-6).toUpperCase()}</td>
+              <td style={{ padding: '10px 12px', minWidth: 180 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                  {session.strip_url && <MediaItem url={session.strip_url} label="STRIP" />}
+                  {(session.photo_urls ?? []).map((url, photoIndex) => (
+                    <MediaItem key={`${session.id}-${url}`} url={url} label={`P${photoIndex + 1}`} />
+                  ))}
+                  {!session.strip_url && (session.photo_urls ?? []).length === 0 && (
+                    <span style={{ opacity: 0.5 }}>no media</span>
+                  )}
+                </div>
+              </td>
               <td style={{ padding: '10px 12px' }}>{LAYOUTS[session.layout_id as LayoutId]?.label ?? session.layout_id}</td>
               <td style={{ padding: '10px 12px' }}>{session.filter}</td>
               <td style={{ padding: '10px 12px' }}>{new Date(session.created_at).toLocaleTimeString()}</td>
@@ -197,7 +258,7 @@ export function AdminSessions() {
           ))}
           {!loading && filteredSessions.length === 0 && (
             <tr>
-              <td colSpan={6} style={{
+              <td colSpan={7} style={{
                 fontFamily: "'Press Start 2P', monospace",
                 fontSize: 10,
                 padding: '24px 12px',
