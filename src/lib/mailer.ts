@@ -64,9 +64,9 @@ export async function sendStripEmail({
     `,
     attachments: [
       {
-        filename: 'pixel-perfect-strip.jpg',
+        filename: 'pixel-perfect-strip.png',
         path: downloadUrl,
-        contentType: 'image/jpeg',
+        contentType: 'image/png',
       },
     ],
   })

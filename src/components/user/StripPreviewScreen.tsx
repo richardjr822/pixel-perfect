@@ -697,7 +697,7 @@ export async function composeStrip(
 
   if (layout.id === 'S' && useSoloShotBorder) {
     await drawSoloShotStrip(ctx, shots, frameColor)
-    return canvas.toDataURL('image/jpeg', 0.9)
+    return canvas.toDataURL('image/png')
   }
 
   ctx.fillStyle = resolveCanvasColor(frameColor)
@@ -732,7 +732,7 @@ export async function composeStrip(
   ctx.fillText('PIXEL PERFECT', width / 2, height - 22)
   drawCanvasStickers(ctx, stickerPack, width, height)
 
-  return canvas.toDataURL('image/jpeg', 0.9)
+  return canvas.toDataURL('image/png')
 }
 
 interface Props {

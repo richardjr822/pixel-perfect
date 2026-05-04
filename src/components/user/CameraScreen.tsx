@@ -80,7 +80,7 @@ export function CameraScreen({
     ctx.translate(canvas.width, 0)
     ctx.scale(-1, 1)
     ctx.drawImage(video, 0, 0)
-    return canvas.toDataURL('image/jpeg', 0.85)
+    return canvas.toDataURL('image/png')
   }, [])
 
   useEffect(() => {
