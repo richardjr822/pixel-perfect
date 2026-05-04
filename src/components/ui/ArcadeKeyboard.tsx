@@ -1,5 +1,8 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
+import type { CSSProperties, KeyboardEvent } from 'react'
+
 const ROWS = [
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
   ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
@@ -17,19 +20,46 @@ interface ArcadeKeyboardProps {
 }
 
 export function ArcadeKeyboard({ value, onChange, onSend, onClose, status }: ArcadeKeyboardProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
+
+  function focusInput() {
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }
+
   function press(char: string) {
     onChange(value + char.toLowerCase())
+    focusInput()
   }
 
   function backspace() {
     onChange(value.slice(0, -1))
+    focusInput()
   }
 
   function clear() {
     onChange('')
+    focusInput()
   }
 
-  const keyBase: React.CSSProperties = {
+  function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      if (status !== 'sending') {
+        onSend()
+      }
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      onClose()
+    }
+  }
+
+  const keyBase: CSSProperties = {
     fontFamily: "'Press Start 2P', monospace",
     fontSize: 11,
     border: '3px solid var(--ink)',
@@ -101,22 +131,43 @@ export function ArcadeKeyboard({ value, onChange, onSend, onClose, status }: Arc
           </div>
         </div>
 
-        {/* Email display */}
+        {/* Email input */}
         <div style={{
           background: 'var(--ink)',
           border: '4px solid var(--mustard)',
-          padding: '14px 16px',
-          fontFamily: "'Press Start 2P', monospace",
-          fontSize: 13,
-          color: 'var(--mustard)',
-          letterSpacing: '0.08em',
+          padding: '0 16px',
           minHeight: 52,
           display: 'flex',
           alignItems: 'center',
           gap: 2,
           overflow: 'hidden',
         }}>
-          <span style={{ wordBreak: 'break-all' }}>{value || ' '}</span>
+          <input
+            ref={inputRef}
+            type="email"
+            value={value}
+            onChange={event => onChange(event.target.value)}
+            onKeyDown={handleInputKeyDown}
+            autoCapitalize="none"
+            autoComplete="email"
+            autoCorrect="off"
+            spellCheck={false}
+            inputMode="email"
+            maxLength={254}
+            aria-label="Email address"
+            style={{
+              width: '100%',
+              minWidth: 0,
+              border: 'none',
+              outline: 'none',
+              background: 'transparent',
+              color: 'var(--mustard)',
+              fontFamily: "'Press Start 2P', monospace",
+              fontSize: 13,
+              letterSpacing: '0.08em',
+              caretColor: 'var(--mustard)',
+            }}
+          />
           <span className="animate-blink" style={{ color: 'var(--mustard)', marginLeft: 1 }}>█</span>
         </div>
 
