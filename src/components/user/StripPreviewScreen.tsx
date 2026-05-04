@@ -71,6 +71,8 @@ const FRAME_COLORS = [
 type StickerPackId = (typeof STICKER_PACKS)[number]['id']
 type SoloShotStyle = 'border' | 'default'
 
+const STRIP_EXPORT_SCALE = 2
+
 const STICKER_PACKS = [
   { id: 'none',      label: 'NONE' },
   { id: 'stars',     label: 'STARS' },
@@ -692,8 +694,11 @@ export async function composeStrip(
     throw new Error('Canvas context unavailable')
   }
 
-  canvas.width = width
-  canvas.height = height
+  canvas.width = width * STRIP_EXPORT_SCALE
+  canvas.height = height * STRIP_EXPORT_SCALE
+  ctx.scale(STRIP_EXPORT_SCALE, STRIP_EXPORT_SCALE)
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
 
   if (layout.id === 'S' && useSoloShotBorder) {
     await drawSoloShotStrip(ctx, shots, frameColor)
